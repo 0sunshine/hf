@@ -35,6 +35,20 @@ int testPicture()
     audio3.files.push_back(u8"e:/¸ÐÐ»ÄãÔøÀ´¹ý.mp3");
     window.audios.push_back(audio3);
 
+    MediaGatewayText text4;
+    text4.width = 400;
+    text4.height = 200;
+    text4.x = 0;
+    text4.y = 200;
+
+    text4.color = "#00ff00";
+    text4.fontSize = 40;
+    text4.direction = MediaGatewayText::Right;
+    text4.speed = 2;
+
+    text4.text = "asdasdasdasdasdasd";
+    window.texts.push_back(text4);
+
     hfsh::SendProgram order;
     order.setMediaGatewayWindow(window);
 

@@ -180,6 +180,59 @@ int handleAudio(Program& program, const std::vector<MediaGatewayAudio>& audios, 
     return 0;
 }
 
+int handleText(Program& program, const std::vector<MediaGatewayText>& texts, const Poco::File&, std::string& desc)
+{
+    for (const auto &text: texts)
+    {
+        Element text_element;
+        text_element.type = "text";
+        text_element.left = text.x;
+        text_element.top = text.y;
+        text_element.width = text.width;
+        text_element.height = text.height;
+
+        ElementItem item;
+        item.content = text.text;
+        item.color = text.color;
+        item.backColor = "#ffffff";
+        item.fontSize = std::to_string(text.fontSize);
+        item.bold = 0;
+        item.italic = 0;
+        item.underline = 0;
+        item.strikeout = 0;
+        item.transparent = 1;
+
+        if(MediaGatewayText::Left == text.direction)
+        {
+            item.direction = 2;
+        }
+        else if(MediaGatewayText::Right == text.direction)
+        {
+            item.direction = 1;
+        }
+        else if(MediaGatewayText::UP == text.direction)
+        {
+            item.direction = 4;
+        }
+        else if(MediaGatewayText::Down == text.direction)
+        {
+            item.direction = 3;
+        }
+        else
+        {
+            item.direction = 0;
+        }
+
+        item.speed = text.speed;
+
+        text_element.items.push_back(item);
+
+        program.elements.push_back(text_element);
+    }
+
+    return 0;
+}
+
 int SendProgram::httpSend(const OrderTarget &target, const std::string &token, std::shared_ptr<cJSON> &resJson,
                           std::string &desc) {
     try
@@ -208,7 +261,7 @@ int SendProgram::httpSend(const OrderTarget &target, const std::string &token, s
         program.beginDate = "2000-01-11";
         program.endDate = "2100-01-12";
         program.beginTime = "10:11:11";
-        program.endTime = "19:11:12";
+        program.endTime = "22:11:12";
 
         program.weeks = std::vector<int>{1,2,3,4,5,6,0};
         program.terminalIds = std::vector<std::string>{"W9AFNKCT"};
@@ -240,6 +293,12 @@ int SendProgram::httpSend(const OrderTarget &target, const std::string &token, s
             return handle_ret;
         }
 
+        //ÎÄ×Ö
+        handle_ret = handleText(program,_window.texts,program_files_dir,desc);
+        if( 0 != handle_ret )
+        {
+            return handle_ret;
+        }
 
         //´´½¨program.json
         cJSON* program_json = program.genarateWebJsonOutput();
