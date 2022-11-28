@@ -12,6 +12,8 @@
 #include <Poco/File.h>
 #include <Poco/DateTime.h>
 #include <Poco/Zip/ZipException.h>
+#include <Poco/FileStream.h>
+
 
 namespace hfsh {
 
@@ -159,7 +161,8 @@ int SendProgram::httpSend(const OrderTarget &target, const std::string &token, s
         cJSON_Delete(program_json);
 
         const std::string &program_file = program_dir.path() + "/program.json";
-        std::ofstream program_file_out(program_file, std::ios::binary | std::ios::ate);
+
+        Poco::FileOutputStream program_file_out(program_file);
         if (!program_file_out)
         {
             desc = "create failed: " + program_file;
@@ -170,7 +173,7 @@ int SendProgram::httpSend(const OrderTarget &target, const std::string &token, s
 
         //创建压缩文件
         const std::string &zip_file = base_dir + _window.program_id + ".zip";
-        std::ofstream out(zip_file, std::ios::binary | std::ios::ate);
+        Poco::FileOutputStream out(zip_file, std::ios::binary | std::ios::ate);
         if (!out)
         {
             desc = "create failed: " + zip_file;
@@ -195,6 +198,10 @@ int SendProgram::httpSend(const OrderTarget &target, const std::string &token, s
     }
     catch (const Poco::Exception &e) {
         desc = e.displayText();
+        return -1;
+    }
+    catch (const std::exception &e) {
+        desc = e.what();
         return -1;
     }
 

@@ -12,7 +12,7 @@ try
     const std::string& token = "123456";
 
     MediaGatewayWindow window;
-    window.program_id = "aaaa";
+    window.program_id = "我擦";
     window.width = 1920;
     window.height = 1080;
 
