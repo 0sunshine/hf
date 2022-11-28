@@ -84,6 +84,102 @@ REFLECT_WEBJSON_OUTPUT_ARGS_NUM(beginDate,endDate,beginTime,endTime,weeks,
                                 background,elements)
 };
 
+int handleImage(Program& program, const std::vector<MediaGatewayImage>& images, const Poco::File& program_files_dir, std::string& desc)
+{
+    for (const auto &image: images) {
+        Element image_element;
+        image_element.type = "picture";
+        image_element.left = image.x;
+        image_element.top = image.y;
+        image_element.width = image.width;
+        image_element.height = image.height;
+
+        for (const auto &f: image.files)
+        {
+            Poco::File res(f);
+            if (!res.exists() || res.isDirectory())
+            {
+                desc = f + " not exists or it is a directory";
+                return -1;
+            }
+            res.copyTo(program_files_dir.path());
+
+            ElementItem item;
+            item.src = Poco::Path(f).getFileName();
+            item.len = 5;
+            image_element.items.push_back(item);
+        }
+
+        program.elements.push_back(image_element);
+    }
+
+    return 0;
+}
+
+int handleVideo(Program& program, const std::vector<MediaGatewayVideo>& videos, const Poco::File& program_files_dir, std::string& desc)
+{
+    for (const auto &video: videos) {
+        Element video_element;
+        video_element.type = "video";
+        video_element.left = video.x;
+        video_element.top = video.y;
+        video_element.width = video.width;
+        video_element.height = video.height;
+
+        for (const auto &f: video.files)
+        {
+            Poco::File res(f);
+            if (!res.exists() || res.isDirectory())
+            {
+                desc = f + " not exists or it is a directory";
+                return -1;
+            }
+            res.copyTo(program_files_dir.path());
+
+            ElementItem item;
+            item.src = Poco::Path(f).getFileName();
+            item.len = 5;
+            video_element.items.push_back(item);
+        }
+
+        program.elements.push_back(video_element);
+    }
+
+    return 0;
+}
+
+int handleAudio(Program& program, const std::vector<MediaGatewayAudio>& audios, const Poco::File& program_files_dir, std::string& desc)
+{
+    for (const auto &audio: audios) {
+        Element audio_element;
+        audio_element.type = "video";
+        audio_element.left = 0;
+        audio_element.top = 0;
+        audio_element.width = 0;
+        audio_element.height = 0;
+
+        for (const auto &f: audio.files)
+        {
+            Poco::File res(f);
+            if (!res.exists() || res.isDirectory())
+            {
+                desc = f + " not exists or it is a directory";
+                return -1;
+            }
+            res.copyTo(program_files_dir.path());
+
+            ElementItem item;
+            item.src = Poco::Path(f).getFileName();
+            item.len = 5;
+            audio_element.items.push_back(item);
+        }
+
+        program.elements.push_back(audio_element);
+    }
+
+    return 0;
+}
+
 int SendProgram::httpSend(const OrderTarget &target, const std::string &token, std::shared_ptr<cJSON> &resJson,
                           std::string &desc) {
     try
@@ -110,44 +206,40 @@ int SendProgram::httpSend(const OrderTarget &target, const std::string &token, s
         Program program;
 
         program.beginDate = "2000-01-11";
-        program.endDate = "2000-01-12";
-        program.beginTime = "11:11:11";
-        program.endTime = "11:11:12";
+        program.endDate = "2100-01-12";
+        program.beginTime = "10:11:11";
+        program.endTime = "19:11:12";
 
         program.weeks = std::vector<int>{1,2,3,4,5,6,0};
-        program.terminalIds = std::vector<std::string>{""};
+        program.terminalIds = std::vector<std::string>{"W9AFNKCT"};
         program.name = _window.program_id;
         program.width = _window.width;
         program.height = _window.height;
-        program.priority = 0;
+        program.priority = 1;
 
         //复制所需文件及填充json结构
-        for (const auto &image: _window.images) {
-            Element image_element;
-            image_element.type = "picture";
-            image_element.left = image.x;
-            image_element.top = image.y;
-            image_element.width = image.width;
-            image_element.height = image.height;
 
-            for (const auto &f: image.files)
-            {
-                Poco::File res(f);
-                if (!res.exists() || res.isDirectory())
-                {
-                    desc = f + " not exists or it is a directory";
-                    return -1;
-                }
-                res.copyTo(program_files_dir.path());
-
-                ElementItem item;
-                item.src = "files/" + Poco::Path(f).getFileName();
-                item.len = 5;
-                image_element.items.push_back(item);
-            }
-
-            program.elements.push_back(image_element);
+        //图片
+        int handle_ret = handleImage(program,_window.images,program_files_dir,desc);
+        if( 0 != handle_ret )
+        {
+            return handle_ret;
         }
+
+        //视频
+        handle_ret = handleVideo(program,_window.videos,program_files_dir,desc);
+        if( 0 != handle_ret )
+        {
+            return handle_ret;
+        }
+
+        //音频
+        handle_ret = handleAudio(program,_window.audios,program_files_dir,desc);
+        if( 0 != handle_ret )
+        {
+            return handle_ret;
+        }
+
 
         //创建program.json
         cJSON* program_json = program.genarateWebJsonOutput();
