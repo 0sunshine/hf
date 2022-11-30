@@ -138,7 +138,7 @@ int handleVideo(Program& program, const std::vector<MediaGatewayVideo>& videos, 
 
             ElementItem item;
             item.src = Poco::Path(f).getFileName();
-            item.len = 5;
+            item.volume = 100;
             video_element.items.push_back(item);
         }
 
@@ -170,7 +170,7 @@ int handleAudio(Program& program, const std::vector<MediaGatewayAudio>& audios, 
 
             ElementItem item;
             item.src = Poco::Path(f).getFileName();
-            item.len = 5;
+            item.volume = 100;
             audio_element.items.push_back(item);
         }
 

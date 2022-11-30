@@ -10,6 +10,6 @@ include_directories(${Boost_INCLUDE_DIR})
 
 file(GLOB sources CONFIGURE_DEPENDS CJson/*.cpp CJson/*.h CJson/*.hpp hfsh/*.h hfsh/*.cpp)
 
-add_executable(${PROJECT_NAME} main.cpp ${sources} MediaGatewayLayout.cpp MediaGatewayLayout.h)
+add_executable(${PROJECT_NAME} main.cpp ${sources} MediaGatewayLayout.cpp MediaGatewayLayout.h MediaGatewayInterface.cpp MediaGatewayInterface.h)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC Poco::Foundation Poco::Net Poco::Zip Boost::system Boost::filesystem)

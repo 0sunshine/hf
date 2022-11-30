@@ -188,7 +188,7 @@ int testSetVolumeTerminal()
   std::shared_ptr<cJSON> resJson = nullptr;
   std::string desc;
 
-  order.volume = 10;
+  order.volume = 30;
   order.terminal_ids.push_back("W9AFNKCT");
 
   int http_status = order.httpSend(target, token, resJson,desc);
