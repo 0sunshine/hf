@@ -6,21 +6,14 @@
 namespace hfsh
 {
 
-struct SendProgram:public OrderRequest
+struct SetVolumeTerminal:public OrderRequest
 {
-    struct Response
-    {
-
-    };
-
-    SendProgram();
-
-    int setMediaGatewayWindow(const MediaGatewayWindow& window);
+    SetVolumeTerminal();
 
     int httpSend(const OrderTarget& target,const std::string& token, std::shared_ptr<cJSON>& resJson,std::string& desc);
 
-private:
-    MediaGatewayWindow _window;
+    int volume;
+    std::vector<std::string> terminal_ids;
 };
 
 }

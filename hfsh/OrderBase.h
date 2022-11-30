@@ -20,7 +20,7 @@ struct OrderTarget
 class OrderRequest
 {
 public:
-    virtual int httpSend(const OrderTarget& target,const std::string& token, std::shared_ptr<cJSON>& resJson, std::string& desc);
+    int httpSend(const OrderTarget& target,const std::string& token, std::shared_ptr<cJSON>& resJson, std::string& desc);
 
 protected:
     std::string _service;

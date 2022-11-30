@@ -260,7 +260,7 @@ int SendProgram::httpSend(const OrderTarget &target, const std::string &token, s
 
         program.beginDate = "2000-01-11";
         program.endDate = "2100-01-12";
-        program.beginTime = "10:11:11";
+        program.beginTime = "00:11:11";
         program.endTime = "22:11:12";
 
         program.weeks = std::vector<int>{1,2,3,4,5,6,0};

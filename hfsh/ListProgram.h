@@ -6,21 +6,12 @@
 namespace hfsh
 {
 
-struct SendProgram:public OrderRequest
+struct ListProgram:public OrderRequest
 {
-    struct Response
-    {
-
-    };
-
-    SendProgram();
-
-    int setMediaGatewayWindow(const MediaGatewayWindow& window);
+    ListProgram();
 
     int httpSend(const OrderTarget& target,const std::string& token, std::shared_ptr<cJSON>& resJson,std::string& desc);
 
-private:
-    MediaGatewayWindow _window;
 };
 
 }

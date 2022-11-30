@@ -1,15 +1,21 @@
 #include <iostream>
 
 #include "hfsh/SendProgram.h"
+#include "hfsh/ListProgram.h"
+#include "hfsh/CancelSend.h"
+#include "hfsh/RemoveSend.h"
+
 #include "MediaGatewayLayout.h"
+#include "hfsh/SendByProgramId.h"
+#include "hfsh/SetVolumeTerminal.h"
 
 const hfsh::OrderTarget target {"192.168.22.120",9101};
 const std::string& token = "123456";
 
-int testPicture()
+int testSendProgram()
 {
     MediaGatewayWindow window;
-    window.program_id = u8"Œ“≤¡xxx2222";
+    window.program_id = u8"≤‚ ‘Ω⁄ƒø";
     window.width = 1920;
     window.height = 1080;
 
@@ -73,17 +79,150 @@ int testPicture()
     return 0;
 }
 
+int testListProgram()
+{
+    hfsh::ListProgram order;
+    std::shared_ptr<cJSON> resJson = nullptr;
+    std::string desc;
 
+    int http_status = order.httpSend(target, token, resJson,desc);
 
+    if(http_status < 0)
+    {
+        std::cout << desc << "   " << http_status << std::endl;
+        return -1;
+    }
+
+    std::cout << "http return " << http_status << std::endl;
+
+    if(resJson)
+    {
+        std::cout << cJSON_Print(resJson.get()) << std::endl;
+    }
+
+    return 0;
+}
+
+int testCancelSend()
+{
+    hfsh::CancelSend order;
+    std::shared_ptr<cJSON> resJson = nullptr;
+    std::string desc;
+
+    order.id = "0f323156-ccb1-47a2-8164-d934c3e6a304";
+
+    int http_status = order.httpSend(target, token, resJson,desc);
+
+    if(http_status < 0)
+    {
+        std::cout << desc << "   " << http_status << std::endl;
+        return -1;
+    }
+
+    std::cout << "http return " << http_status << std::endl;
+
+    if(resJson)
+    {
+        std::cout << cJSON_Print(resJson.get()) << std::endl;
+    }
+
+    return 0;
+}
+
+int testRemoveSend()
+{
+    hfsh::RemoveSend order;
+    std::shared_ptr<cJSON> resJson = nullptr;
+    std::string desc;
+
+    order.id = "2d829b3c-c1cd-4d43-a560-679398b8385a";
+
+    int http_status = order.httpSend(target, token, resJson,desc);
+
+    if(http_status < 0)
+    {
+        std::cout << desc << "   " << http_status << std::endl;
+        return -1;
+    }
+
+    std::cout << "http return " << http_status << std::endl;
+
+    if(resJson)
+    {
+        std::cout << cJSON_Print(resJson.get()) << std::endl;
+    }
+
+    return 0;
+}
+
+int testSendByProgramId()
+{
+    hfsh::SendByProgramId order;
+    std::shared_ptr<cJSON> resJson = nullptr;
+    std::string desc;
+
+    order.id = "e7daca3d6bfe496cbfda0a02efe164e5";
+    order.terminal_ids.push_back("W9AFNKCT");
+
+    int http_status = order.httpSend(target, token, resJson,desc);
+
+    if(http_status < 0)
+    {
+        std::cout << desc << "   " << http_status << std::endl;
+        return -1;
+    }
+
+    std::cout << "http return " << http_status << std::endl;
+
+    if(resJson)
+    {
+        std::cout << cJSON_Print(resJson.get()) << std::endl;
+    }
+
+    return 0;
+}
+
+int testSetVolumeTerminal()
+{
+  hfsh::SetVolumeTerminal order;
+  std::shared_ptr<cJSON> resJson = nullptr;
+  std::string desc;
+
+  order.volume = 10;
+  order.terminal_ids.push_back("W9AFNKCT");
+
+  int http_status = order.httpSend(target, token, resJson,desc);
+
+  if(http_status < 0)
+  {
+    std::cout << desc << "   " << http_status << std::endl;
+    return -1;
+  }
+
+  std::cout << "http return " << http_status << std::endl;
+
+  if(resJson)
+  {
+    std::cout << cJSON_Print(resJson.get()) << std::endl;
+  }
+
+  return 0;
+}
 
 int main()
 try
 {
     std::cout << "Hello, World!" << std::endl;
 
+//1b87a749-d255-4adb-86b0-b767f03fe670
+//b00f0475-0ddf-4867-a61b-0a1ccf1f7f71
 
-    testPicture();
-
+    //testSendProgram();
+    //testListProgram();
+    //testCancelSend();
+    //testRemoveSend();
+    //testSendByProgramId();
+    testSetVolumeTerminal();
 
     std::cout << "Hello, World--------------" << std::endl;
     return 0;
