@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MediaGatewayLayout.h"
+#include "../MediaGatewayLayout.h"
 
 #include <boost/optional.hpp>
 

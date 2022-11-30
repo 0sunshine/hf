@@ -1,234 +1,145 @@
+ï»¿
 #include <iostream>
+#include <boost/asio.hpp>
+#include <cstdlib>
+#include <iostream>
+#include <thread>
+#include <utility>
+#include <boost/asio.hpp>
+#include <chrono>
 
-#include "hfsh/SendProgram.h"
-#include "hfsh/ListProgram.h"
-#include "hfsh/CancelSend.h"
-#include "hfsh/RemoveSend.h"
+#include "./mylog.h"
 
-#include "MediaGatewayLayout.h"
-#include "hfsh/SendByProgramId.h"
-#include "hfsh/SetVolumeTerminal.h"
+using namespace std;
 
-const hfsh::OrderTarget target {"192.168.22.120",9101};
-const std::string& token = "123456";
+#include "hfsh/MediaGatewayHandler.h"
 
-int testSendProgram()
+using boost::asio::ip::tcp;
+
+const int max_length = 1024*16;
+
+void session(tcp::socket sock)
 {
-    MediaGatewayWindow window;
-    window.program_id = u8"²âÊÔ½ÚÄ¿";
-    window.width = 1920;
-    window.height = 1080;
-
-    MediaGatewayImage image1;
-    image1.width = 200;
-    image1.height = 200;
-    image1.x = 0;
-    image1.y = 0;
-    image1.files.push_back(u8"d:/¸£Àûxxxx.jpg");
-    image1.files.push_back(u8"C:/Users/Administrator/Downloads/¹Ø×¢FancyPig¹«ÖÚºÅ.png");
-
-    window.images.push_back(image1);
-
-//    MediaGatewayVideo video2;
-//    video2.width = 200;
-//    video2.height = 200;
-//    video2.x = 200;
-//    video2.y = 0;
-//    video2.files.push_back(u8"e:/Ï°½üÆ½°ÙÄêÇìµä½²»°01.mp4");
-//    window.videos.push_back(video2);
-
-    MediaGatewayAudio audio3;
-    audio3.files.push_back(u8"e:/¸ÐÐ»ÄãÔøÀ´¹ý.mp3");
-    window.audios.push_back(audio3);
-
-    MediaGatewayText text4;
-    text4.width = 400;
-    text4.height = 200;
-    text4.x = 0;
-    text4.y = 200;
-
-    text4.color = "#00ff00";
-    text4.fontSize = 40;
-    text4.direction = MediaGatewayText::Right;
-    text4.speed = 2;
-
-    text4.text = "asdasdasdasdasdasd";
-    window.texts.push_back(text4);
-
-    hfsh::SendProgram order;
-    order.setMediaGatewayWindow(window);
-
-    std::shared_ptr<cJSON> resJson = nullptr;
-    std::string desc;
-
-    int http_status = order.httpSend(target, token, resJson,desc);
-
-    if(http_status < 0)
+    std::cout << "new connection " <<  std::endl;
+    std::shared_ptr<void> raii_log((void*)1, [](void*) {
+      std::cout << "disconnection " << std::endl;
+    });
+    try
     {
-        std::cout << desc << "   " << http_status << std::endl;
-        return -1;
+        for (;;)
+        {
+            char data[max_length];
+            std::string all_data;
+
+            while (true)
+            {
+                boost::system::error_code error;
+
+                auto can_read = sock.available(error);
+                int wait_times = 100;
+
+                while (can_read <= 0 && !error)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    can_read = sock.available(error);
+                    --wait_times;
+                    if (wait_times < 0)
+                    {
+                        TRACE_LOG_A(nullptr, TRACE_LOG_LEVEL_ERROR, "request timeout");
+                        return;
+                    }
+                }
+
+                size_t length = 0;
+
+                if (!error)
+                {
+                    length = sock.read_some(boost::asio::buffer(data), error);
+                }
+
+                if (error == boost::asio::error::eof)
+                    break; // Connection closed cleanly by peer.
+                else if (error)
+                    throw boost::system::system_error(error); // Some other error.
+
+                all_data += std::string(data, length);
+
+                auto pos = all_data.find('\0');
+                if (pos != std::string::npos) //å®Œæ•´ä¸€æ¡
+                {
+                    cJSON* json = cJSON_Parse(all_data.c_str());
+                    if (json == nullptr)
+                    {
+                        TRACE_LOG_A(nullptr, TRACE_LOG_LEVEL_ERROR, "invailed json");
+                        return;
+                    }
+
+                    hfsh::Protocol input;
+                    bool parse_ok = input.parseWebJsonInput(json);
+                    if (!parse_ok)
+                    {
+                        TRACE_LOG_A(nullptr, TRACE_LOG_LEVEL_ERROR, "parse hfsh::Protocol failed");
+                        return;
+                    }
+
+                    hfsh::Protocol output;
+                    if( !hfsh::hander(input,output) )
+                    {
+                        TRACE_LOG_A(nullptr, TRACE_LOG_LEVEL_ERROR, "handler hfsh::Protocol failed, %s", all_data.c_str());
+                        return;
+                    }
+
+
+                    cJSON* responseJson = output.genarateWebJsonOutput();
+                    if (responseJson == nullptr)
+                    {
+                        TRACE_LOG_A(nullptr, TRACE_LOG_LEVEL_ERROR, "gen hfsh::Protocol failed");
+                        return;
+                    }
+
+                    std::string resString = JsonHandler::JsonToString(responseJson);
+                    resString += '\0';
+
+                    auto send_bytes = boost::asio::write(sock, boost::asio::buffer(resString));
+
+                    return;
+                }
+                else
+                {
+                    continue;
+                }
+
+            }
+        }
     }
-
-    std::cout << "http return " << http_status << std::endl;
-
-    if(resJson)
+    catch (std::exception& e)
     {
-        std::cout << cJSON_Print(resJson.get()) << std::endl;
+        std::cerr << "Exception in session: " << e.what() << "\n";
+    }
+}
+
+void server(boost::asio::io_context& io_context, unsigned short port)
+{
+    tcp::acceptor a(io_context, tcp::endpoint(tcp::v4(), port));
+    for (;;)
+    {
+        session(a.accept());
+    }
+}
+
+int main(int argc, char* argv[])
+{
+    try
+    {
+        boost::asio::io_context io_context;
+        server(io_context, 7943);
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "Exception: " << e.what() << "\nexit....";
+        std::this_thread::sleep_for( std::chrono::seconds(10));
     }
 
     return 0;
 }
 
-int testListProgram()
-{
-    hfsh::ListProgram order;
-    std::shared_ptr<cJSON> resJson = nullptr;
-    std::string desc;
-
-    int http_status = order.httpSend(target, token, resJson,desc);
-
-    if(http_status < 0)
-    {
-        std::cout << desc << "   " << http_status << std::endl;
-        return -1;
-    }
-
-    std::cout << "http return " << http_status << std::endl;
-
-    if(resJson)
-    {
-        std::cout << cJSON_Print(resJson.get()) << std::endl;
-    }
-
-    return 0;
-}
-
-int testCancelSend()
-{
-    hfsh::CancelSend order;
-    std::shared_ptr<cJSON> resJson = nullptr;
-    std::string desc;
-
-    order.id = "0f323156-ccb1-47a2-8164-d934c3e6a304";
-
-    int http_status = order.httpSend(target, token, resJson,desc);
-
-    if(http_status < 0)
-    {
-        std::cout << desc << "   " << http_status << std::endl;
-        return -1;
-    }
-
-    std::cout << "http return " << http_status << std::endl;
-
-    if(resJson)
-    {
-        std::cout << cJSON_Print(resJson.get()) << std::endl;
-    }
-
-    return 0;
-}
-
-int testRemoveSend()
-{
-    hfsh::RemoveSend order;
-    std::shared_ptr<cJSON> resJson = nullptr;
-    std::string desc;
-
-    order.id = "2d829b3c-c1cd-4d43-a560-679398b8385a";
-
-    int http_status = order.httpSend(target, token, resJson,desc);
-
-    if(http_status < 0)
-    {
-        std::cout << desc << "   " << http_status << std::endl;
-        return -1;
-    }
-
-    std::cout << "http return " << http_status << std::endl;
-
-    if(resJson)
-    {
-        std::cout << cJSON_Print(resJson.get()) << std::endl;
-    }
-
-    return 0;
-}
-
-int testSendByProgramId()
-{
-    hfsh::SendByProgramId order;
-    std::shared_ptr<cJSON> resJson = nullptr;
-    std::string desc;
-
-    order.id = "e7daca3d6bfe496cbfda0a02efe164e5";
-    order.terminal_ids.push_back("W9AFNKCT");
-
-    int http_status = order.httpSend(target, token, resJson,desc);
-
-    if(http_status < 0)
-    {
-        std::cout << desc << "   " << http_status << std::endl;
-        return -1;
-    }
-
-    std::cout << "http return " << http_status << std::endl;
-
-    if(resJson)
-    {
-        std::cout << cJSON_Print(resJson.get()) << std::endl;
-    }
-
-    return 0;
-}
-
-int testSetVolumeTerminal()
-{
-  hfsh::SetVolumeTerminal order;
-  std::shared_ptr<cJSON> resJson = nullptr;
-  std::string desc;
-
-  order.volume = 30;
-  order.terminal_ids.push_back("W9AFNKCT");
-
-  int http_status = order.httpSend(target, token, resJson,desc);
-
-  if(http_status < 0)
-  {
-    std::cout << desc << "   " << http_status << std::endl;
-    return -1;
-  }
-
-  std::cout << "http return " << http_status << std::endl;
-
-  if(resJson)
-  {
-    std::cout << cJSON_Print(resJson.get()) << std::endl;
-  }
-
-  return 0;
-}
-
-int main()
-try
-{
-    std::cout << "Hello, World!" << std::endl;
-
-//1b87a749-d255-4adb-86b0-b767f03fe670
-//b00f0475-0ddf-4867-a61b-0a1ccf1f7f71
-
-    //testSendProgram();
-    //testListProgram();
-    //testCancelSend();
-    //testRemoveSend();
-    //testSendByProgramId();
-    testSetVolumeTerminal();
-
-    std::cout << "Hello, World--------------" << std::endl;
-    return 0;
-}
-catch(const std::exception& e)
-{
-    std::cout << e.what() << std::endl;
-    return 0;
-}

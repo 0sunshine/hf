@@ -20,6 +20,8 @@
   THE SOFTWARE.
 */
 
+#define _CRT_SECURE_NO_WARNINGS
+
 /* cJSON */
 /* JSON parser in C. */
 #include <string.h>

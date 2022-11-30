@@ -10,6 +10,8 @@
 
 #include <sstream>
 
+#include "../mylog.h"
+
 using Poco::Net::HTTPRequest;
 using Poco::Net::HTTPResponse;
 using Poco::Net::HTMLForm;
@@ -59,7 +61,15 @@ try
     std::ostringstream oss;
     StreamCopier::copyStream(body,oss);
 
-    cJSON* json = cJSON_Parse( oss.str().c_str() );
+    std::string recv_body = oss.str();
+
+    cJSON* json = cJSON_Parse( recv_body.c_str() );
+
+    if(json == nullptr)
+    {
+        TRACE_LOG_A(nullptr, TRACE_LOG_LEVEL_ERROR, "cJSON_Parse err : %s", recv_body.c_str())
+    }
+
     resJson.reset(json,[](cJSON* p){ if(p!=nullptr) cJSON_Delete(p); });
 
     return static_cast<int>(res.getStatus());
